@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# Android
+smart_home_project/android/app/google-services.json
+smart_home_project/android/.gradle/
+smart_home_project/android/captures/
+smart_home_project/android/local.properties
+smart_home_project/android/gradle/
+smart_home_project/android/.cxx/
+
+# iOS
+smart_home_project/ios/Flutter/flutter_export_environment.sh
+smart_home_project/ios/Pods/
+smart_home_project/ios/.symlinks/
+smart_home_project/ios/Flutter/Generated.xcconfig
+smart_home_project/ios/Runner/GoogleService-Info.plist
+
+# Face data (données sensibles)
+face_data/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Environment variables
+.env
+.env.local

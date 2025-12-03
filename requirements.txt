@@ -1,0 +1,12 @@
+# Face Recognition System - Python Dependencies
+
+# Core libraries
+flask==3.0.0
+opencv-python==4.8.1.78
+face-recognition==1.3.0
+numpy==1.24.3
+pillow==10.1.0
+
+# Additional dependencies (automatically installed with face-recognition)
+# dlib
+# cmake (required for dlib installation)
