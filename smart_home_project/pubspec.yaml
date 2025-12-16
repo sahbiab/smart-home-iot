@@ -39,6 +39,8 @@ dependencies:
   cloud_firestore: ^4.15.8
   firebase_storage: ^11.6.9
   firebase_messaging: ^14.7.10
+  firebase_database: ^10.4.9
+  flutter_local_notifications: ^17.0.0  # ⭐ NEW: For local notifications
   google_sign_in: ^6.2.1
   flutter_mjpeg: ^2.0.4
   image_picker: ^0.8.7+5

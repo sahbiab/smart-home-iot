@@ -15,6 +15,7 @@ class _CameraPageState extends State<CameraPage> {
   bool loading = true;
   String? errorMsg;
   bool isConnected = false;
+  bool isFullscreen = false;
 
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
@@ -105,7 +106,13 @@ class _CameraPageState extends State<CameraPage> {
                       ),
                       child: IconButton(
                         icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () {
+                          if (Navigator.canPop(context)) {
+                            Navigator.pop(context);
+                          } else {
+                            Navigator.pushReplacementNamed(context, '/home');
+                          }
+                        },
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -191,11 +198,11 @@ class _CameraPageState extends State<CameraPage> {
 
               // Camera Stream
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: loading
-                      ? Center(
-                          child: Column(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: loading
+                        ? Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               CircularProgressIndicator(
@@ -211,11 +218,11 @@ class _CameraPageState extends State<CameraPage> {
                                 ),
                               ),
                             ],
-                          ),
-                        )
-                      : errorMsg != null
-                          ? _buildErrorState()
-                          : _buildCameraStream(),
+                          )
+                        : errorMsg != null
+                            ? _buildErrorState()
+                            : _buildCameraStream(),
+                  ),
                 ),
               ),
 
@@ -237,7 +244,7 @@ class _CameraPageState extends State<CameraPage> {
                         child: _controlButton(
                           Icons.fullscreen_rounded,
                           "Fullscreen",
-                          () {},
+                          _toggleFullscreen,
                         ),
                       ),
                     ],
@@ -251,75 +258,92 @@ class _CameraPageState extends State<CameraPage> {
   );
   }
 
+  void _toggleFullscreen() {
+    if (isFullscreen) {
+      Navigator.pop(context);
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => _FullscreenCameraView(streamUrl: streamUrl!),
+        ),
+      );
+    }
+  }
+
   Widget _buildCameraStream() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white.withValues(alpha: 0.15),
-            Colors.white.withValues(alpha: 0.05),
+    return AspectRatio(
+      aspectRatio: 4 / 3, // Match camera resolution 640x480
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white.withValues(alpha: 0.15),
+              Colors.white.withValues(alpha: 0.05),
+            ],
+          ),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.2),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+            BoxShadow(
+              color: const Color(0xFFFFB74D).withValues(alpha: 0.2),
+              blurRadius: 30,
+              offset: const Offset(0, 15),
+            ),
           ],
         ),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.2),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-          BoxShadow(
-            color: const Color(0xFFFFB74D).withValues(alpha: 0.2),
-            blurRadius: 30,
-            offset: const Offset(0, 15),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Mjpeg(
-          stream: streamUrl!,
-          isLive: true,
-          timeout: const Duration(seconds: 4),
-          error: (context, error, stack) {
-            return Container(
-              color: Colors.black.withValues(alpha: 0.5),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.videocam_off_rounded,
-                      size: 64,
-                      color: Colors.white.withValues(alpha: 0.5),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      "Camera offline",
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Check your connection",
-                      style: TextStyle(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Mjpeg(
+            stream: streamUrl!,
+            isLive: true,
+            fit: BoxFit.cover,
+            timeout: const Duration(seconds: 4),
+            error: (context, error, stack) {
+              return Container(
+                color: Colors.black.withValues(alpha: 0.5),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.videocam_off_rounded,
+                        size: 64,
                         color: Colors.white.withValues(alpha: 0.5),
-                        fontSize: 14,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+                      Text(
+                        "Camera offline",
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.8),
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "Check your connection",
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.5),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );
@@ -425,6 +449,91 @@ class _CameraPageState extends State<CameraPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// Fullscreen Camera View
+class _FullscreenCameraView extends StatelessWidget {
+  final String streamUrl;
+
+  const _FullscreenCameraView({required this.streamUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // Camera Stream - Full screen
+          Center(
+            child: AspectRatio(
+              aspectRatio: 4 / 3,
+              child: Mjpeg(
+                stream: streamUrl,
+                isLive: true,
+                fit: BoxFit.contain,
+                timeout: const Duration(seconds: 4),
+                error: (context, error, stack) {
+                  return Container(
+                    color: Colors.black,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.videocam_off_rounded,
+                            size: 80,
+                            color: Colors.white.withValues(alpha: 0.5),
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            "Camera offline",
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.8),
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          // Exit Button
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                    onPressed: () {
+                          Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+                        },
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

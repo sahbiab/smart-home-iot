@@ -230,7 +230,8 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     if (loading) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        backgroundColor: Colors.black,
+        body: Center(child: CircularProgressIndicator(color: Colors.orange)),
       );
     }
 
@@ -247,15 +248,32 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text("Profile"),
-        backgroundColor: AppColors.background,
+        title: const Text("Profile", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      backgroundColor: AppColors.background,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
+      backgroundColor: Colors.transparent,
+      body: Container(
+        height: MediaQuery.of(context).size.height,
+        width: MediaQuery.of(context).size.width,
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/bghome.jpg'),
+            fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(
+              Colors.black.withValues(alpha: 0.5),
+              BlendMode.darken,
+            ),
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
             GestureDetector(
               onTap: _pickAvatar,
               child: CircleAvatar(
@@ -376,6 +394,8 @@ class _ProfilePageState extends State<ProfilePage> {
               child: const Text("Sign Out"),
             ),
           ],
+        ),
+      ),
         ),
       ),
     );

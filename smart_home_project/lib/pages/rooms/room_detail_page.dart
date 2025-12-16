@@ -1,5 +1,6 @@
 ﻿import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 class RoomDetailPage extends StatefulWidget {
   final String roomName;
@@ -18,20 +19,24 @@ class RoomDetailPage extends StatefulWidget {
 }
 
 class _RoomDetailPageState extends State<RoomDetailPage> {
-  // Device states
-  Map<String, bool> deviceStates = {
-    'Light Bulbs': true,
-    'CCTV Cameras': true,
-    'Smart TV': false,
-    'Air conditioner': true,
-  };
+  late DatabaseReference _roomRef;
+  late DatabaseReference _climateRef;
 
-  Map<String, int> deviceCounts = {
-    'Light Bulbs': 3,
-    'CCTV Cameras': 2,
-    'Smart TV': 1,
-    'Air conditioner': 1,
-  };
+  @override
+  void initState() {
+    super.initState();
+    // Determine the room ID based on the room name
+    String roomId = _getRoomId(widget.roomName);
+    _roomRef = FirebaseDatabase.instance.ref('rooms/$roomId');
+    _climateRef = FirebaseDatabase.instance.ref('climate');
+  }
+
+  String _getRoomId(String name) {
+    if (name.toLowerCase().contains("kitchen")) return "kitchen";
+    if (name.toLowerCase().contains("bedroom")) return "bedroom";
+    if (name.toLowerCase().contains("living")) return "living";
+    return "living"; // Default
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,16 +49,7 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
               _getRoomImage(),
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  color: Colors.grey[900],
-                  child: Center(
-                    child: Icon(
-                      widget.roomIcon,
-                      size: 100,
-                      color: Colors.white.withValues(alpha: 0.1),
-                    ),
-                  ),
-                );
+                return Container(color: Colors.grey[900]);
               },
             ),
           ),
@@ -82,50 +78,28 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
+                // Header (Back button)
                 Padding(
                   padding: const EdgeInsets.all(20.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Back Button
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: IconButton(
-                          icon: const Icon(Icons.arrow_back, color: Colors.white),
-                          onPressed: () => Navigator.pop(context),
-                        ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        width: 1,
                       ),
-                      
-                      // Edit/Settings Button (Visual only)
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: IconButton(
-                          icon: const Icon(Icons.more_vert, color: Colors.white),
-                          onPressed: () {},
-                        ),
-                      ),
-                    ],
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                    ),
                   ),
                 ),
 
                 const Spacer(),
 
-                // Room Title & Info
+                // Room Title & Climate Info
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24.0),
                   child: Column(
@@ -133,46 +107,72 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
                     children: [
                       Row(
                         children: [
-                          Text(
-                            widget.roomName,
-                            style: const TextStyle(
-                              fontSize: 42,
-                              fontWeight: FontWeight.w300,
-                              color: Colors.white,
-                              letterSpacing: -1.0,
+                          Expanded(
+                            child: Text(
+                              widget.roomName,
+                              style: const TextStyle(
+                                fontSize: 42,
+                                fontWeight: FontWeight.w300,
+                                color: Colors.white,
+                                letterSpacing: -1.0,
+                              ),
                             ),
                           ),
-                          const SizedBox(width: 16),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: widget.gradientColors[0].withValues(alpha: 0.8),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.thermostat, color: Colors.white, size: 16),
-                                const SizedBox(width: 4),
-                                const Text(
-                                  "24°C",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                          // Climate Badge (DHT11 Data)
+                          StreamBuilder<DatabaseEvent>(
+                            stream: _climateRef.onValue,
+                            builder: (context, snapshot) {
+                              double temp = 0;
+                              if (snapshot.hasData && snapshot.data?.snapshot.value != null) {
+                                final data = snapshot.data!.snapshot.value as Map<dynamic, dynamic>;
+                                temp = (data['temperature'] ?? 0).toDouble();
+                              }
+
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: widget.gradientColors[0].withValues(alpha: 0.8),
+                                  borderRadius: BorderRadius.circular(20),
                                 ),
-                              ],
-                            ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.thermostat, color: Colors.white, size: 16),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      "${temp.toStringAsFixed(1)}°C",
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        "${_getActiveDeviceCount()} devices active",
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.8),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
-                        ),
+                      // Active Devices count (visual estimate)
+                      StreamBuilder<DatabaseEvent>(
+                        stream: _roomRef.onValue,
+                        builder: (context, snapshot) {
+                          int activeCount = 0;
+                          if (snapshot.hasData && snapshot.data?.snapshot.value != null) {
+                            final data = snapshot.data!.snapshot.value as Map<dynamic, dynamic>;
+                            data.forEach((key, value) {
+                              if (value == true) activeCount++;
+                            });
+                          }
+                          return Text(
+                            "$activeCount devices active",
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.8),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -180,7 +180,7 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
 
                 const SizedBox(height: 32),
 
-                // Devices Control Panel (Glassmorphism)
+                // Devices Control Panel
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.only(top: 24, left: 24, right: 24, bottom: 24),
@@ -214,44 +214,68 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
                             ),
                           ),
                           const SizedBox(height: 20),
+                          
+                          // Horizontal List of Devices
                           SizedBox(
-                            height: 140, // Height for horizontal scroll
-                            child: ListView(
-                              scrollDirection: Axis.horizontal,
-                              physics: const BouncingScrollPhysics(),
-                              children: [
-                                _deviceCard(
-                                  'Light Bulbs',
+                            height: 220, // ⭐ Fix: Increased to 220 to be safe
+                            child: StreamBuilder<DatabaseEvent>(
+                              stream: _roomRef.onValue,
+                              builder: (context, snapshot) {
+                                Map<dynamic, dynamic> roomData = {};
+                                if (snapshot.hasData && snapshot.data?.snapshot.value != null) {
+                                  roomData = snapshot.data!.snapshot.value as Map<dynamic, dynamic>;
+                                }
+
+                                List<Widget> deviceCards = [];
+
+                                // 1. Main Light (Available in all rooms)
+                                bool lightStatus = roomData['light'] ?? false;
+                                deviceCards.add(_deviceCard(
+                                  'Light Bulb',
                                   Icons.lightbulb_outline_rounded,
-                                  deviceStates['Light Bulbs']!,
-                                  deviceCounts['Light Bulbs']!,
+                                  lightStatus,
                                   [const Color(0xFFFFD54F), const Color(0xFFFFA726)],
-                                ),
-                                const SizedBox(width: 16),
-                                _deviceCard(
-                                  'Smart TV',
-                                  Icons.tv_rounded,
-                                  deviceStates['Smart TV']!,
-                                  deviceCounts['Smart TV']!,
-                                  [const Color(0xFF00b0ff), const Color(0xFF0091ea)],
-                                ),
-                                const SizedBox(width: 16),
-                                _deviceCard(
-                                  'AC Unit',
-                                  Icons.ac_unit_rounded,
-                                  deviceStates['Air conditioner']!,
-                                  deviceCounts['Air conditioner']!,
-                                  [const Color(0xFF00e676), const Color(0xFF00c853)],
-                                ),
-                                const SizedBox(width: 16),
-                                _deviceCard(
-                                  'Cameras',
-                                  Icons.videocam_outlined,
-                                  deviceStates['CCTV Cameras']!,
-                                  deviceCounts['CCTV Cameras']!,
-                                  [const Color(0xFFE040FB), const Color(0xFFAB47BC)],
-                                ),
-                              ],
+                                  () => _roomRef.update({'light': !lightStatus}),
+                                ));
+
+                                // 2. Smart Window (Servo) - Only in Living Room
+                                if (widget.roomName.contains("Living")) {
+                                  // Safely handle both boolean (legacy) and integer (new) types
+                                  dynamic rawWindow = roomData['window'];
+                                  int windowPosition = 0;
+                                  
+                                  if (rawWindow is bool) {
+                                    windowPosition = rawWindow ? 90 : 0; // Convert bool to int
+                                  } else if (rawWindow is int) {
+                                    windowPosition = rawWindow;
+                                  } else if (rawWindow is double) {
+                                    windowPosition = rawWindow.toInt();
+                                  } else if (rawWindow is String) {
+                                      windowPosition = int.tryParse(rawWindow) ?? 0;
+                                  }
+
+                                  deviceCards.add(const SizedBox(width: 16));
+                                  deviceCards.add(_windowPositionCard(windowPosition));
+                                }
+
+                                // 3. Dummy TV (If requested, optional)
+                                if (widget.roomName.contains("Living")) {
+                                    deviceCards.add(const SizedBox(width: 16));
+                                    deviceCards.add(_deviceCard(
+                                    'Smart TV',
+                                    Icons.tv_rounded,
+                                    false, // Always off for now
+                                    [const Color(0xFFE040FB), const Color(0xFFAB47BC)],
+                                    () {}, // No action
+                                    ));
+                                }
+
+                                return ListView(
+                                  scrollDirection: Axis.horizontal,
+                                  physics: const BouncingScrollPhysics(),
+                                  children: deviceCards,
+                                );
+                              },
                             ),
                           ),
                         ],
@@ -267,28 +291,15 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
     );
   }
 
-  int _getActiveDeviceCount() {
-    return deviceStates.values.where((state) => state).length;
-  }
-
   Widget _deviceCard(
     String name,
     IconData icon,
     bool isActive,
-    int deviceCount,
     List<Color> gradientColors,
+    VoidCallback onTap,
   ) {
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          // Map generic names back to state keys if needed
-          String key = name;
-          if (name == 'AC Unit') key = 'Air conditioner';
-          if (name == 'Cameras') key = 'CCTV Cameras';
-          
-          deviceStates[key] = !deviceStates[key]!;
-        });
-      },
+      onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         width: 130,
@@ -357,6 +368,105 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _windowPositionCard(int currentPosition) {
+    return Container(
+      width: 200,
+      padding: const EdgeInsets.all(12), // ⭐ Reduced padding
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF42A5F5).withValues(alpha: 0.9),
+            const Color(0xFF1E88E5).withValues(alpha: 0.9),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF42A5F5).withValues(alpha: 0.4),
+            blurRadius: 12,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.window_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              Text(
+                '${currentPosition}°',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18, // Bigger degree text
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          // const SizedBox(height: 8), // Removed spacing
+          Column(
+             crossAxisAlignment: CrossAxisAlignment.start,
+             children: [
+                const Text(
+                  'Smart Window',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  currentPosition == 0 ? 'Closed' : currentPosition == 180 ? 'Fully Open' : 'Open',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.8),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+             ]
+          ),
+          
+          SliderTheme(
+            data: SliderThemeData(
+              activeTrackColor: Colors.white,
+              inactiveTrackColor: Colors.white.withValues(alpha: 0.3),
+              thumbColor: Colors.white,
+              overlayColor: Colors.white.withValues(alpha: 0.2),
+              trackHeight: 6, // Thicker track
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10.0),
+            ),
+            child: Slider(
+              value: currentPosition.toDouble().clamp(0, 60), // Clamp value just in case
+              min: 0,
+              max: 60, // ⭐ Max 60 degrees
+              divisions: 60, // 1 degree per step
+              onChanged: (value) {
+                _roomRef.update({'window': value.toInt()});
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

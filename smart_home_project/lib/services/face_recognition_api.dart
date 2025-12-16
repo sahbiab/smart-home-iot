@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:flutter/material.dart';
 
 class FaceRecognitionAPI {
   // Server running on your Raspberry Pi
-  static const String baseUrl = 'http://192.168.100.148:5000';
+  static const String baseUrl = 'http://192.168.137.13:5000';
   // If using Android emulator on same PC, use: 'http://10.0.2.2:5000'
   
   /// Upload person's face images to the backend server
@@ -27,7 +28,7 @@ class FaceRecognitionAPI {
       }
       
       if (base64Images.isEmpty) {
-        print('No images to upload');
+        debugPrint("No images to upload.");
         return false;
       }
       
@@ -46,12 +47,12 @@ class FaceRecognitionAPI {
         print('Upload successful: ${data['message']}');
         return true;
       } else {
-        print('Upload failed: ${response.statusCode} - ${response.body}');
+        debugPrint("Upload Failed: ${response.statusCode} - ${response.body}");
         return false;
       }
       
     } catch (e) {
-      print('Error uploading to server: $e');
+      debugPrint("Error uploading person: $e");
       return false;
     }
   }
@@ -68,7 +69,7 @@ class FaceRecognitionAPI {
       }
       return null;
     } catch (e) {
-      print('Error getting status: $e');
+      debugPrint("Error loading images: $e");
       return null;
     }
   }
@@ -82,7 +83,7 @@ class FaceRecognitionAPI {
       
       return response.statusCode == 200;
     } catch (e) {
-      print('Error training model: $e');
+      debugPrint('Error loading models: $e');
       return false;
     }
   }

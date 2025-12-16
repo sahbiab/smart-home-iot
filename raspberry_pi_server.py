@@ -9,12 +9,15 @@ from flask_cors import CORS
 import base64
 import os
 from datetime import datetime
+import cv2
+import numpy as np
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for mobile app
 
 # Directory to save received images
-FACE_DATA_DIR = "/home/pi/face_data/faces"
+# Directory to save received images
+FACE_DATA_DIR = os.path.join(os.path.expanduser("~"), "face_data", "faces")
 
 # Create base directory if it doesn't exist
 os.makedirs(FACE_DATA_DIR, exist_ok=True)
@@ -55,13 +58,17 @@ def upload_person():
         saved_count = 0
         for image_name, base64_data in images.items():
             try:
-                # Decode base64 image
-                image_bytes = base64.b64decode(base64_data)
+                # Decode base64 image to numpy array
+                nparr = np.frombuffer(base64.b64decode(base64_data), np.uint8)
+                img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+                if img is None:
+                    print(f"✗ Error: Could not decode image {image_name}")
+                    continue
                 
-                # Save image
-                image_path = os.path.join(person_dir, f"{image_name}.jpg")
-                with open(image_path, 'wb') as f:
-                    f.write(image_bytes)
+                # Save image as PNG (OpenCV handles conversion based on extension)
+                image_path = os.path.join(person_dir, f"{image_name}.png")
+                cv2.imwrite(image_path, img)
                 
                 saved_count += 1
                 print(f"✓ Saved: {image_path}")
@@ -137,7 +144,7 @@ if __name__ == '__main__':
     print("=" * 60)
     print(f"📁 Data directory: {FACE_DATA_DIR}")
     print(f"🌐 Server starting on http://0.0.0.0:5000")
-    print(f"📱 Mobile app should connect to: http://192.168.137.160:5000")
+    print(f"📱 Mobile app should connect to: http://192.168.100.152:5000")
     print("=" * 60)
     print("\nWaiting for image uploads...\n")
     

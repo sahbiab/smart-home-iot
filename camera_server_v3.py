@@ -3,15 +3,8 @@ import cv2
 from flask import Flask, Response
 import time
 import threading
-import signal
-import sys
-import socket
-from werkzeug.serving import make_server
 
 app = Flask(__name__)
-
-# Enable socket reuse to prevent "Address already in use" errors
-app.config['SERVER_NAME'] = None
 
 # Global variables
 camera = None
@@ -143,73 +136,22 @@ def start_camera_thread():
     camera_thread = threading.Thread(target=camera_capture_thread, daemon=True)
     camera_thread.start()
 
-def cleanup_and_exit(signum=None, frame=None):
-    """Graceful shutdown handler"""
-    global camera_running, camera, server
-    
-    print("\n🛑 Shutting down gracefully...")
-    
-    # Stop camera thread
-    camera_running = False
-    if camera_thread is not None:
-        camera_thread.join(timeout=2)
-    
-    # Release camera
-    with camera_lock:
-        if camera is not None:
-            camera.release()
-            camera = None
-    
-    # Shutdown server
-    if 'server' in globals() and server is not None:
-        server.shutdown()
-    
-    print("✓ Server stopped cleanly")
-    sys.exit(0)
-
-class ReuseAddrServer(make_server.__class__):
-    """Custom server class that enables SO_REUSEADDR"""
-    def server_bind(self):
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        super().server_bind()
-
 if __name__ == '__main__':
-    # Register signal handlers for graceful shutdown
-    signal.signal(signal.SIGINT, cleanup_and_exit)  # Ctrl+C
-    signal.signal(signal.SIGTERM, cleanup_and_exit)  # kill command
-    
     print("=" * 60)
-    print("📹 Multi-Client Camera Server v2 (Fixed)")
+    print("📹 Multi-Client Camera Server v3")
     print("=" * 60)
     print("Starting on http://0.0.0.0:8082")
     print("📱 External URL: http://192.168.100.152:8082")
     print("Supports multiple simultaneous connections!")
-    print("Port reuse enabled - no more 'Address in use' errors!")
     print("=" * 60)
     
     # Start camera capture thread
     start_camera_thread()
     
     try:
-        # Create server with SO_REUSEADDR enabled
-        server = make_server('0.0.0.0', 8082, app, threaded=True)
-        
-        # Enable address reuse at socket level
-        server.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        
-        print("✓ Server started successfully with port reuse enabled")
-        print("Press Ctrl+C to stop\n")
-        
-        server.serve_forever()
-        
-    except OSError as e:
-        if "Address already in use" in str(e):
-            print("\n❌ Port 8082 is still in use!")
-            print("Run this command to kill it: sudo fuser -k 8082/tcp")
-        else:
-            print(f"\n❌ Error: {e}")
-    except KeyboardInterrupt:
-        print("\n🛑 Interrupted by user")
+        app.run(host='0.0.0.0', port=8082, debug=False, threaded=True)
     finally:
-        cleanup_and_exit()
-
+        camera_running = False
+        if camera_thread is not None:
+            camera_thread.join(timeout=2)
+        print("\n✓ Server stopped")

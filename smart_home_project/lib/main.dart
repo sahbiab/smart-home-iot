@@ -7,10 +7,15 @@ import 'package:smart_home_project/auth/start_page.dart';
 import 'package:smart_home_project/pages/camera/camera_page.dart';
 import 'package:smart_home_project/pages/home/home_page.dart';
 import 'package:smart_home_project/profile/profile_page.dart';
+import 'package:smart_home_project/services/notification_service.dart';  // ⭐ NEW
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  
+  // ⭐ NEW: Initialize notifications
+  await NotificationService().initialize();
+  
   runApp(const MyApp());
 }
 
@@ -68,8 +73,8 @@ class _MyAppState extends State<MyApp> {
           body: Center(child: CircularProgressIndicator()),
         )
       : _user == null
-          ? const LoginPage()
-          : const SmartHomeIntroPage(),
+          ? const SmartHomeIntroPage()
+          : HomePage(),
 
     );
   }
